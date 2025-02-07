@@ -128,8 +128,8 @@ class CNN(nn.Module):
             if verbose:
                 epoch_trloss = np.mean([i[1] for i in log['training_loss'] if i[0] == epoch])
                 epoch_tracc = np.mean([i[1].cpu() for i in log['training_accuracy'] if i[0] == epoch])
-                epoch_valloss = np.mean([i[1].cpu() for i in log['validation_accuracy'] if i[0] == epoch])
-                epoch_valacc = np.mean([i[1].cpu() for i in log['validation_loss'] if i[0] == epoch])
+                epoch_valloss = np.mean([i[1] for i in log['validation_accuracy'] if i[0] == epoch])
+                epoch_valacc = np.mean([i[1] for i in log['validation_loss'] if i[0] == epoch])
                 epoch_valaer = np.mean([i[1].cpu() for i in log['validation_aer'] if i[0] == epoch])
                 print(f"{epoch}: trloss:{epoch_trloss:.2f}  tracc:{epoch_tracc:.2f}  val_loss:{epoch_valloss:.2f}  val_acc:{epoch_valacc:.2f} val_aer:{epoch_valaer:.2f}")
 

@@ -29,8 +29,8 @@ print('Loaded ODH...')
 train_windows, train_meta = train_data.parse_windows(30, 5)
 valid_windows, valid_meta = valid_data.parse_windows(30, 5)
 mapping = {0: 0, 2: 1, 3: 2}
-train_meta = np.array([mapping[l] for l in train_meta])
-valid_meta = np.array([mapping[l] for l in valid_meta])
+train_meta['classes'] = np.array([mapping[l] for l in train_meta['classes']])
+valid_meta['classes'] = np.array([mapping[l] for l in valid_meta['classes']])
 
 # (4) Fit the model 
 train_dataloader = make_data_loader_CNN(train_windows, train_meta['classes'], batch_size=10000)
