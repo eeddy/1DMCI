@@ -5,6 +5,7 @@ import random
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import pickle 
 
 class CNN(nn.Module):
     def __init__(self, labels, n_channels, n_samples, dropout=0.2):
@@ -70,15 +71,12 @@ class CNN(nn.Module):
         x = self.output_layer(x)
         return x
     
-    def fit(self, training_dataloader, validation_dataloader, learning_rate=1e-2, num_epochs=400, verbose=True, patience=10):
+    def fit(self, training_dataloader, validation_dataloader, learning_rate=1e-2, num_epochs=5, verbose=True):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(device)
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
         loss_function = nn.CrossEntropyLoss(weight=torch.tensor(self.class_weights, dtype=torch.float32).to(device))
-        log = {"training_loss": [], "validation_loss": [], "training_accuracy": [], "validation_accuracy": [], "validation_aer": []}
-        best_val_loss = float('inf')
-        epochs_without_improvement = 0
+        log = {"training_loss": [], "validation_loss": [], "training_accuracy": [], "validation_accuracy": [], "validation_aacc": []}
 
         for epoch in range(num_epochs):
             self.train()
@@ -112,26 +110,18 @@ class CNN(nn.Module):
             val_loss /= len(validation_dataloader)
             log["validation_loss"].append((epoch, val_loss))
             log["validation_accuracy"].append((epoch, accuracy))
-            log["validation_aer"].append((epoch, acc_non_zero))
+            log["validation_aacc"].append((epoch, acc_non_zero))
 
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                epochs_without_improvement = 0
-            else:
-                epochs_without_improvement += 1
-
-            if epochs_without_improvement >= patience:
-                print(f'Early stopping at epoch {epoch}')
-                break
-
-            scheduler.step()
             if verbose:
                 epoch_trloss = np.mean([i[1] for i in log['training_loss'] if i[0] == epoch])
                 epoch_tracc = np.mean([i[1].cpu() for i in log['training_accuracy'] if i[0] == epoch])
-                epoch_valloss = np.mean([i[1] for i in log['validation_accuracy'] if i[0] == epoch])
-                epoch_valacc = np.mean([i[1] for i in log['validation_loss'] if i[0] == epoch])
-                epoch_valaer = np.mean([i[1].cpu() for i in log['validation_aer'] if i[0] == epoch])
-                print(f"{epoch}: trloss:{epoch_trloss:.2f}  tracc:{epoch_tracc:.2f}  val_loss:{epoch_valloss:.2f}  val_acc:{epoch_valacc:.2f} val_aer:{epoch_valaer:.2f}")
+                epoch_valacc = np.mean([i[1] for i in log['validation_accuracy'] if i[0] == epoch])
+                epoch_valloss = np.mean([i[1] for i in log['validation_loss'] if i[0] == epoch])
+                epoch_valaer = np.mean([i[1].cpu() for i in log['validation_aacc'] if i[0] == epoch])
+                print(f"{epoch}: trloss:{epoch_trloss:.2f}  tracc:{epoch_tracc:.2f}  val_loss:{epoch_valloss:.2f}  val_acc:{epoch_valacc:.2f} val_active_acc:{epoch_valaer:.2f}")
+
+        # save the logs 
+        pickle.dump(log, open('Results/CNN_training_log.pkl', 'wb'))
 
         self.eval()
         self.to('cpu')
