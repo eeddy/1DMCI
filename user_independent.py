@@ -16,33 +16,37 @@ data = dataset.prepare_data(split=True)
 
 # (2) Get rid of pinch class and isolate a validation set (you can change the validation if you want)
 train_data = data['Train']
-train_data = train_data.isolate_data("classes", [0,1,2,3,4], fast=True)
+train_data = train_data.isolate_data("classes", [0,2,3], fast=True)
 valid_data = train_data.isolate_data("subjects", list(range(255, 306)), fast=True)
 train_data = train_data.isolate_data("subjects", list(range(0,255)), fast=True)
 test_data = data['Test']
-test_data = test_data.isolate_data("classes", [0,1,2,3,4], fast=True)
+test_data = test_data.isolate_data("classes", [0,2,3], fast=True)
 train_data = train_data + test_data
 
 # Active threshold all of the training data 
-classes = np.array([c[0][0] for c in train_data.classes])
-active_classes = np.where(classes != 0)[0]
-for ai in active_classes:
-    train_data.data[ai] = train_data.data[ai][int(0.20*len(train_data.data[ai])):int(0.80*len(train_data.data[ai]))]
-    train_data.classes[ai] = train_data.classes[ai][0:len(train_data.data[ai])]
-    train_data.reps[ai] = train_data.reps[ai][0:len(train_data.data[ai])]
-    train_data.subjects[ai] = train_data.subjects[ai][0:len(train_data.data[ai])]
+# classes = np.array([c[0][0] for c in train_data.classes])
+# active_classes = np.where(classes != 0)[0]
+# for ai in active_classes:
+#     train_data.data[ai] = train_data.data[ai][int(0.20*len(train_data.data[ai])):int(0.80*len(train_data.data[ai]))]
+#     train_data.classes[ai] = train_data.classes[ai][0:len(train_data.data[ai])]
+#     train_data.reps[ai] = train_data.reps[ai][0:len(train_data.data[ai])]
+#     train_data.subjects[ai] = train_data.subjects[ai][0:len(train_data.data[ai])]
 
 print('Loaded ODH...')
 
 # (3) Extracting Windows and Active Thresholding
-train_windows, train_meta = train_data.parse_windows(30, 5)
-valid_windows, valid_meta = valid_data.parse_windows(30, 5)
+train_windows, train_meta = train_data.parse_windows(30, 10)
+valid_windows, valid_meta = valid_data.parse_windows(30, 10)
+
+mapping = {0: 0, 2: 1, 3: 2}
+train_labels = np.array([mapping[l] for l in train_meta['classes']])
+valid_labels = np.array([mapping[l] for l in valid_meta['classes']])
 
 # (4) Fit the model 
-train_dataloader = make_data_loader_CNN(train_windows, train_meta['classes'], batch_size=64)
-valid_dataloader = make_data_loader_CNN(valid_windows, valid_meta['classes'], batch_size=64)
+train_dataloader = make_data_loader_CNN(train_windows, train_labels, batch_size=512)
+valid_dataloader = make_data_loader_CNN(valid_windows, valid_labels, batch_size=512)
 dataloader_dictionary = {"training_dataloader": train_dataloader, "validation_dataloader": valid_dataloader}
 cnn = CNN(train_meta['classes'], n_channels = train_windows.shape[1], n_samples  = train_windows.shape[2])
-dl_dictionary = {"learning_rate": 1e-3, "num_epochs": 5, "verbose": True}
+dl_dictionary = {"learning_rate": 1e-3, "num_epochs": 20, "verbose": True}
 cnn.fit(**dataloader_dictionary, **dl_dictionary)
 torch.save(cnn, 'Results/UI_CNN.model')
