@@ -19,7 +19,6 @@ class CNN(nn.Module):
         self.class_weights = self.class_weights / self.class_weights.sum()
         self.dropout = nn.Dropout(dropout)
 
-        kernel_size = 5
         # let's have 3 convolutional layers that taper off
         l0_filters = n_channels
         l1_filters = 128
@@ -27,7 +26,7 @@ class CNN(nn.Module):
         l3_filters = 32
         # let's manually setup those layers
         # simple layer 1
-        self.conv1 = nn.Conv1d(l0_filters, l1_filters, kernel_size=kernel_size)
+        self.conv1 = nn.Conv1d(l0_filters, l1_filters, kernel_size=5)
         self.bn1   = nn.BatchNorm1d(l1_filters)
         self.pool1 = nn.MaxPool1d(kernel_size=2)
         # simple layer 2
@@ -75,8 +74,9 @@ class CNN(nn.Module):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(device)
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
         loss_function = nn.CrossEntropyLoss(weight=torch.tensor(self.class_weights, dtype=torch.float32).to(device))
-        log = {"training_loss": [], "validation_loss": [], "training_accuracy": [], "validation_accuracy": [], "validation_aacc": []}
+        log = {"training_loss": [], "validation_loss": [], "training_accuracy": [], "validation_accuracy": []}
 
         for epoch in range(num_epochs):
             self.train()
@@ -92,6 +92,7 @@ class CNN(nn.Module):
                 log["training_loss"].append((epoch, loss.item()))
                 log["training_accuracy"].append((epoch, acc))
 
+            scheduler.step()
             self.eval()
             val_loss = 0
             correct = 0
@@ -106,20 +107,17 @@ class CNN(nn.Module):
                     correct += (predicted == labels).sum().item()
 
             accuracy = correct / len(validation_dataloader.dataset)
-            acc_non_zero = (torch.argmax(output, 1)[labels != 0] == labels[labels != 0]).sum() / (labels != 0).sum()
             val_loss /= len(validation_dataloader)
             log["validation_loss"].append((epoch, val_loss))
             log["validation_accuracy"].append((epoch, accuracy))
-            log["validation_aacc"].append((epoch, acc_non_zero))
 
             if verbose:
                 epoch_trloss = np.mean([i[1] for i in log['training_loss'] if i[0] == epoch])
                 epoch_tracc = np.mean([i[1].cpu() for i in log['training_accuracy'] if i[0] == epoch])
                 epoch_valacc = np.mean([i[1] for i in log['validation_accuracy'] if i[0] == epoch])
                 epoch_valloss = np.mean([i[1] for i in log['validation_loss'] if i[0] == epoch])
-                epoch_valaer = np.mean([i[1].cpu() for i in log['validation_aacc'] if i[0] == epoch])
-                print(f"{epoch}: trloss:{epoch_trloss:.2f}  tracc:{epoch_tracc:.2f}  val_loss:{epoch_valloss:.2f}  val_acc:{epoch_valacc:.2f} val_active_acc:{epoch_valaer:.2f}")
-
+                print(f"{epoch}: trloss:{epoch_trloss:.2f}  tracc:{epoch_tracc:.2f}  val_loss:{epoch_valloss:.2f}  val_acc:{epoch_valacc:.2f}")
+        
         # save the logs 
         pickle.dump(log, open('Results/CNN_training_log.pkl', 'wb'))
 
