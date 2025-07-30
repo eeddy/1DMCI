@@ -26,8 +26,8 @@ train_data = train_data + test_data
 print('Loaded ODH...')
 
 # (3) Extracting Windows and Active Thresholding
-train_windows, train_meta = train_data.parse_windows(30, 10)
-valid_windows, valid_meta = valid_data.parse_windows(30, 10)
+train_windows, train_meta = train_data.parse_windows(40, 5)
+valid_windows, valid_meta = valid_data.parse_windows(40, 5)
 
 nm_windows = train_windows[np.where(np.array(train_meta['classes']) == 0)]
 nm_means = np.mean(np.abs(nm_windows), axis=2)
@@ -50,10 +50,10 @@ train_labels = np.array([mapping[l] for l in train_meta['classes']])
 valid_labels = np.array([mapping[l] for l in valid_meta['classes']])
 
 # (4) Fit the model 
-train_dataloader = make_data_loader_CNN(train_windows, train_labels, batch_size=2048)
-valid_dataloader = make_data_loader_CNN(valid_windows, valid_labels, batch_size=2048)
+train_dataloader = make_data_loader_CNN(train_windows, train_labels, batch_size=1024)
+valid_dataloader = make_data_loader_CNN(valid_windows, valid_labels, batch_size=1024)
 dataloader_dictionary = {"training_dataloader": train_dataloader, "validation_dataloader": valid_dataloader}
 cnn = CNN(train_meta['classes'], n_channels = train_windows.shape[1], n_samples  = train_windows.shape[2])
-dl_dictionary = {"learning_rate": 1e-3, "num_epochs": 5, "verbose": True}
+dl_dictionary = {"learning_rate": 1e-3, "num_epochs": 20, "verbose": True}
 cnn.fit(**dataloader_dictionary, **dl_dictionary)
 torch.save(cnn, 'Results/UI_CNN.model')
