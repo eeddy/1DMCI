@@ -4,6 +4,7 @@ from libemg.offline_metrics import OfflineMetrics
 import numpy as np 
 from Models.MLP import * 
 from Models.CNN import *
+from scipy.stats import zscore
 
 fix_random_seed(42)
 
@@ -28,6 +29,15 @@ print('Loaded ODH...')
 # (3) Extracting Windows and Active Thresholding
 train_windows, train_meta = train_data.parse_windows(40, 5)
 valid_windows, valid_meta = valid_data.parse_windows(40, 5)
+
+# Normalize the Data
+mean_train = np.mean(train_windows, axis=(0, 2))
+std_train = np.std(train_windows, axis=(0, 2))
+train_windows = (train_windows - mean_train[np.newaxis, :, np.newaxis]) / std_train[np.newaxis, :, np.newaxis]
+valid_windows = (valid_windows - mean_train[np.newaxis, :, np.newaxis]) / std_train[np.newaxis, :, np.newaxis]
+
+print("Data Normalized.")
+print(train_windows)
 
 nm_windows = train_windows[np.where(np.array(train_meta['classes']) == 0)]
 nm_means = np.mean(np.abs(nm_windows), axis=2)
