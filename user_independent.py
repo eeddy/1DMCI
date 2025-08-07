@@ -14,16 +14,16 @@ om = OfflineMetrics()
 dataset = get_dataset_list(cross_user=True)['EMGEPN612']()
 data = dataset.prepare_data(split=True)
 
-# TODO: Get rid of bad subjects
+subjects = np.hstack([np.load('train_accuracies.npy'), np.load('test_accuracies.npy')])
+good_subjects = np.where(subjects > 0.95)[0]
 
 # Get rid of pinch class and isolate a validation set (you can change the validation if you want)
 train_data = data['Train']
-train_data = train_data.isolate_data("classes", [0,2,3], fast=True)
-valid_data = train_data.isolate_data("subjects", list(range(255, 306)), fast=True)
-train_data = train_data.isolate_data("subjects", list(range(0,255)), fast=True)
 test_data = data['Test']
-test_data = test_data.isolate_data("classes", [0,2,3], fast=True)
 train_data = train_data + test_data
+train_data = train_data.isolate_data("classes", [0,2,3], fast=True)
+valid_data = train_data.isolate_data("subjects", list(good_subjects[430:450]), fast=True)
+train_data = train_data.isolate_data("subjects", list(good_subjects[0:430]), fast=True)
 
 print('Loaded ODH...')
 
@@ -33,7 +33,7 @@ valid_windows, valid_meta = valid_data.parse_windows(40, 5)
 
 nm_windows = train_windows[np.where(np.array(train_meta['classes']) == 0)]
 nm_means = np.mean(np.abs(nm_windows), axis=2)
-threshold = np.mean(nm_means) + 3 * np.std(nm_means)
+threshold = np.mean(nm_means) + 5 * np.std(nm_means)
 
 active_train_windows = train_windows[np.where(np.array(train_meta['classes']) != 0)]
 active_tw_means = np.mean(np.abs(active_train_windows), axis=2)
@@ -52,8 +52,8 @@ train_labels = np.array([mapping[l] for l in train_meta['classes']])
 valid_labels = np.array([mapping[l] for l in valid_meta['classes']])
 
 # (4) Fit the model 
-train_dataloader = make_data_loader_CNN(train_windows, train_labels, batch_size=1024)
-valid_dataloader = make_data_loader_CNN(valid_windows, valid_labels, batch_size=1024)
+train_dataloader = make_data_loader_CNN(train_windows, train_labels, batch_size=64)
+valid_dataloader = make_data_loader_CNN(valid_windows, valid_labels, batch_size=64)
 dataloader_dictionary = {"training_dataloader": train_dataloader, "validation_dataloader": valid_dataloader}
 cnn = CNN(train_meta['classes'], n_channels = train_windows.shape[1], n_samples  = train_windows.shape[2])
 dl_dictionary = {"learning_rate": 1e-3, "num_epochs": 20, "verbose": True}
