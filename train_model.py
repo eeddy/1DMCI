@@ -2,7 +2,6 @@ from libemg.datasets import get_dataset_list
 from libemg.feature_extractor import FeatureExtractor
 from libemg.offline_metrics import OfflineMetrics
 import numpy as np 
-from Models.MLP import * 
 from Models.CNN import *
 
 fix_random_seed(42)
@@ -14,7 +13,8 @@ om = OfflineMetrics()
 dataset = get_dataset_list(cross_user=True)['EMGEPN612']()
 data = dataset.prepare_data(split=True)
 
-subjects = np.hstack([np.load('train_accuracies.npy'), np.load('test_accuracies.npy')])
+# Remove bad subjects. This was done because many subjects would elict both flexion and extension when returning to rest, for example.
+subjects = np.hstack([np.load('Other/train_accuracies.npy'), np.load('Other/test_accuracies.npy')])
 good_subjects = np.where(subjects > 0.95)[0]
 
 # Get rid of pinch class and isolate a validation set (you can change the validation if you want)
@@ -31,6 +31,7 @@ print('Loaded ODH...')
 train_windows, train_meta = train_data.parse_windows(40, 5)
 valid_windows, valid_meta = valid_data.parse_windows(40, 5)
 
+# Using 5 standard deviations above no motion to active threshold the data (removing transient data)
 nm_windows = train_windows[np.where(np.array(train_meta['classes']) == 0)]
 nm_means = np.mean(np.abs(nm_windows), axis=2)
 threshold = np.mean(nm_means) + 5 * np.std(nm_means)
@@ -51,7 +52,7 @@ mapping = {0: 0, 2: 1, 3: 2}
 train_labels = np.array([mapping[l] for l in train_meta['classes']])
 valid_labels = np.array([mapping[l] for l in valid_meta['classes']])
 
-# (4) Fit the model 
+# Training the model 
 train_dataloader = make_data_loader_CNN(train_windows, train_labels, batch_size=64)
 valid_dataloader = make_data_loader_CNN(valid_windows, valid_labels, batch_size=64)
 dataloader_dictionary = {"training_dataloader": train_dataloader, "validation_dataloader": valid_dataloader}

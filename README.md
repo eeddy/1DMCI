@@ -1,23 +1,9 @@
-# Continuous Cross User 
-As we discussed this project really consists of two parts:
+# Continuous Cross User Model 
 
-1. **Offline Optimization**: Optimizing a neural network to get the best possible offline performance.  
-2. **Online Evaluation**: Testing the model online to validate part 1. 
+![alt text](Other/scrolling.png)
 
-## Offline Optimization 
-I've tried a lot of ways to optimize the offline model... I'll share some of my thoughts. 
+## Training Offline Model
+To train the offline model run `train_model.py`. Make sure you have the latest version of LibEMG installed which has access to the built in datasets. 
 
-1. Theoretically, we should get the best performance with a CNN. What I've seen so far confirms this. 
-2. We need to figure out how to best pre-process the data. In theory, this should benefit all models (LDA, MLP, and CNN). So this is probably where I would start. 
-    1. **Active Thresholding**: On a per subject and across the dataset. 
-    2. **Removing Subjects**: Should we remove some subjects? 
-    3. **Removing Transient Parts**: Should we remove the transient pieces of the discrete gestures? 
-    4. **No Motion Data**: There is currently a large imbalance of NM data. Should we include all of it? 
-3. We could look at the impact of temporal models. Once we have good preprocessing lets try adding LSTM, RNN, Transformer layers to our MLP and see if we can extract improved performance. 
-    1. Note - we tried this and got improved offline performance but it didn't work online. 
-4. Explore the use of manual feature extarction vs CNN-based feature extraction. 
-
-Look in the Models/ folder for how your deep networks should be structured. 
-
-## Online Evaluation
-Once we have optimized the model from part 1 we will try the best ones online in a user-in-the-loop evaluation.
+## Running Online Model 
+Make sure that the Myo Armband LED is on the extensor muscle with the USB port facing downward. Start by running `run_continuous.py`. After feeling the armband buzz, in a seperate terminal run `oned_test.py` to start the GUI. The two will communciate via UDP over localhost. To control the cursor use the wrist flexion (move left) and extension (move right) gestures.
