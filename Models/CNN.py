@@ -119,7 +119,7 @@ class CNN(nn.Module):
                 print(f"{epoch}: trloss:{epoch_trloss:.2f}  tracc:{epoch_tracc:.2f}  val_loss:{epoch_valloss:.2f}  val_acc:{epoch_valacc:.2f}")
         
         # save the logs 
-        pickle.dump(log, open('Results/CNN_training_log.pkl', 'wb'))
+        pickle.dump(log, open('CNN_training_log.pkl', 'wb'))
 
         self.eval()
         self.to('cpu')
