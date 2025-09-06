@@ -57,6 +57,6 @@ train_dataloader = make_data_loader_CNN(train_windows, train_labels, batch_size=
 valid_dataloader = make_data_loader_CNN(valid_windows, valid_labels, batch_size=64)
 dataloader_dictionary = {"training_dataloader": train_dataloader, "validation_dataloader": valid_dataloader}
 cnn = CNN(train_meta['classes'], n_channels = train_windows.shape[1], n_samples  = train_windows.shape[2])
-dl_dictionary = {"learning_rate": 1e-3, "num_epochs": 20, "verbose": True}
+dl_dictionary = {"learning_rate": 1e-3, "num_epochs": 20}
 cnn.fit(**dataloader_dictionary, **dl_dictionary)
 torch.save(cnn, 'UI_CNN.model')

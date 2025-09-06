@@ -38,6 +38,7 @@ class CNN(nn.Module):
         self.bn3   = nn.BatchNorm1d(l3_filters)
         # and we need an activation function:
         self.act = nn.ReLU()
+        self.save_log = {"training_loss": [], "validation_loss": [], "training_accuracy": [], "validation_accuracy": []}
 
         # now we need to figure out how many neurons we have at the linear layer
         # we can use an example input of the correct shape to find the number of neurons
@@ -70,7 +71,7 @@ class CNN(nn.Module):
         x = self.output_layer(x)
         return x
     
-    def fit(self, training_dataloader, validation_dataloader, learning_rate=1e-2, num_epochs=5, verbose=True):
+    def fit(self, training_dataloader, validation_dataloader, learning_rate=1e-2, num_epochs=5):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(device)
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
@@ -102,24 +103,26 @@ class CNN(nn.Module):
                     labels = labels.to(device)
                     output = self.forward(data)
                     loss = loss_function(output, labels)
-                    val_loss += loss.item()
-                    _, predicted = torch.max(output, 1)
-                    correct += (predicted == labels).sum().item()
+                    acc = sum(torch.argmax(output, 1) == labels) / labels.shape[0]
+                    log["validation_loss"].append((epoch, loss.item()))
+                    log["validation_accuracy"].append((epoch, acc))
 
-            accuracy = correct / len(validation_dataloader.dataset)
-            val_loss /= len(validation_dataloader)
-            log["validation_loss"].append((epoch, val_loss))
-            log["validation_accuracy"].append((epoch, accuracy))
+           
+            epoch_trloss = np.mean([i[1] for i in log['training_loss'] if i[0] == epoch])
+            epoch_tracc = np.mean([i[1].cpu() for i in log['training_accuracy'] if i[0] == epoch])
+            epoch_valacc = np.mean([i[1].cpu() for i in log['validation_accuracy'] if i[0] == epoch])
+            epoch_valloss = np.mean([i[1] for i in log['validation_loss'] if i[0] == epoch])
 
-            if verbose:
-                epoch_trloss = np.mean([i[1] for i in log['training_loss'] if i[0] == epoch])
-                epoch_tracc = np.mean([i[1].cpu() for i in log['training_accuracy'] if i[0] == epoch])
-                epoch_valacc = np.mean([i[1] for i in log['validation_accuracy'] if i[0] == epoch])
-                epoch_valloss = np.mean([i[1] for i in log['validation_loss'] if i[0] == epoch])
-                print(f"{epoch}: trloss:{epoch_trloss:.2f}  tracc:{epoch_tracc:.2f}  val_loss:{epoch_valloss:.2f}  val_acc:{epoch_valacc:.2f}")
+            # Save average to logs 
+            self.save_log["training_loss"].append(epoch_trloss)
+            self.save_log["validation_loss"].append(epoch_valloss)
+            self.save_log["training_accuracy"].append(epoch_tracc)
+            self.save_log["validation_accuracy"].append(epoch_valacc)
+
+            print(f"{epoch}: trloss:{epoch_trloss:.2f}  tracc:{epoch_tracc:.2f}  val_loss:{epoch_valloss:.2f}  val_acc:{epoch_valacc:.2f}")
         
         # save the logs 
-        pickle.dump(log, open('CNN_training_log.pkl', 'wb'))
+        pickle.dump(self.save_log, open('CNN_training_log.pkl', 'wb'))
 
         self.eval()
         self.to('cpu')
